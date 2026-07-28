@@ -1,0 +1,20 @@
+services:
+  ml-model-inference:
+    image: thechef3179/ml-model-inference:latest
+    container_name: ml-model-inference
+    networks:
+      - model-inference-net
+    ports:
+      - 8000:8000
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./temp_models:/app/temp_models
+    environment:
+      - APP_PORT=8000
+      - API_SECRET_TOKEN=replaceme
+    restart: unless-stopped
+
+networks:
+  model-inference-net:
+    external: true
