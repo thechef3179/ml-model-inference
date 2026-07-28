@@ -1,24 +1,30 @@
-# app.py
 import os
 import shutil
 from nicegui import ui, app, events
 import numpy as np
 from fastapi import HTTPException
-
+import logging
 # Import our custom engine
 from core import state, ModelLoader, PredictionRequest
 
+# initiate logging module
+logger = logging.getLogger(__name__)
+
 # Load the secret from environment variables. 
-API_SECRET_TOKEN = os.getenv("API_SECRET_TOKEN", "pass123")
+API_SECRET_TOKEN = os.getenv("API_SECRET_TOKEN")
+APP_PORT = os.getenv("APP_PORT")
 
 # --- 1. FASTAPI ENDPOINTS (The API Layer) ---
 @app.post("/predict")
 async def api_predict(request: PredictionRequest):
     if request.token != API_SECRET_TOKEN:
+        logger.error("Invalid or missing API token.")
         raise HTTPException(status_code=401, detail="Invalid or missing API token.")
     if not state.active_model:
+        logger.error("No model active.")
         raise HTTPException(status_code=503, detail="No model active.")
     try:
+        logger.info("Started /predict function")
         sorted_keys = sorted(request.datapoint.keys())
         feature_vector = []
         cols = [request.datapoint[k] for k in sorted_keys]    # each is a length-3 list
@@ -30,16 +36,22 @@ async def api_predict(request: PredictionRequest):
             "framework": state.active_model.framework,
             "features_used": sorted_keys # Added for your debugging/verification
         }
+        logger.info("Finished /predict function")
     except Exception as e:
+        logger.error("Error performing /predict function")
+        logger.error(f"{str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/predict_proba")
 async def api_predict_proba(request: PredictionRequest):
     if request.token != API_SECRET_TOKEN:
+        logger.error("Invalid or missing API token.")
         raise HTTPException(status_code=401, detail="Invalid or missing API token.")
     if not state.active_model:
+        logger.error("No model active.")
         raise HTTPException(status_code=503, detail="No model active.")
     try:
+        logger.info("Started /predict_proba function")
         sorted_keys = sorted(request.datapoint.keys())
         feature_vector = []
         cols = [request.datapoint[k] for k in sorted_keys]    # each is a length-3 list
@@ -51,13 +63,20 @@ async def api_predict_proba(request: PredictionRequest):
             "framework": state.active_model.framework,
             "features_used": sorted_keys
         }
+        logger.info("Finished /predict_proba function")
     except Exception as e:
+        logger.error("Error performing /predict_proba function")
+        logger.error(f"{str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # --- 2. NICEGUI DASHBOARD (The Management Layer) ---
 @ui.page('/')
 def dashboard():
+    # starting logging module
+    logging.basicConfig(filename='logs/ml-model-inference.log', level=logging.INFO)
+    logger.info('Started ML Model Inference System')
+    # ensure the model paths exist
     if not os.path.exists('temp_models'): os.makedirs('temp_models')
     if not os.path.exists('models'): os.makedirs('models')
 
@@ -94,13 +113,16 @@ def dashboard():
                     ui.item(f"{name} [{w.framework}]")
             
             ui.notify(f"Loaded {e.file.name}", type='positive')
+            logger.info(f"Loaded {e.file.name} model.")
         except Exception as ex:
+            logger.error(f"{str(ex)}")
             ui.notify(f"Error: {ex}", type='negative')
 
     def save_permanently():
         target_name = model_select.value
         if not target_name or target_name not in state.registry:
             ui.notify("No model selected to save!", type='warning')
+            logger.error("No model selected to save!")
             return
         try:
             old_path = f"temp_models/tmp_{target_name}"
@@ -109,9 +131,12 @@ def dashboard():
             if os.path.exists(old_path):
                 shutil.move(old_path, new_path)
                 ui.notify(f"Saved: {target_name} to /models", type='positive')
+                logger.info(f"Saved: {target_name} to /models")
             else:
                 ui.notify("Error: Temporary file not found. Try re-uploading.", type='negative')
+                logger.error("Error: Temporary file not found. Try re-uploading.")
         except Exception as ex:
+            logger.error(f"Save failed: {str(ex)}")
             ui.notify(f"Save failed: {ex}", type='negative')
 
     def unready_model():
@@ -124,6 +149,7 @@ def dashboard():
             ui.query('body').style('background-color: #22C55E') # Tailwind green-500
             main_head_label.text = "Model Active"
             ui.notify(f"Model switched to {name}")
+            logger.info(f"Model switched to {name}")
         else:
             state.active_model = None
             model_select.value = None 
@@ -131,6 +157,7 @@ def dashboard():
             ui.query('body').style('background-color: #EF4444')
             main_head_label.text = "Model not Active"
             ui.notify("Model un-readied", type='warning')
+            logger.error("Model un-readied")
 
     # 1. MAIN VERTICAL CONTAINER
     with ui.column().classes('w-full items-center py-10'):
@@ -161,4 +188,4 @@ def dashboard():
 
 
 # Run the application
-ui.run(title="ML Model Runner", port=8000)
+ui.run(title="ML Model Runner", port=APP_PORT)

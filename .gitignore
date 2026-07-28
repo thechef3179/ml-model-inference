@@ -1,5 +1,6 @@
 __pycache__/
 models/
 temp_models/
+logs/
 .DS_Store
 
