@@ -21,7 +21,7 @@ A dual-purpose Python application designed to manage, switch, and serve machine 
 The project follows a modular, decoupled architecture:
 
 1.  **`core.py` (The Engine):** Defines an `Abstract Base Class (ABC)` that forces all model wrappers to implement `.predict()` and `.predict_proba()`. This ensures the API doesn't care if it is talking to a Neural Network or a Random Forest.
-2.  **`app.py` (The Controller):** 
+2.  **`main.py` (The Controller):** 
     * **FastAPI Layer:** Handles high-speed JSON requests, performs feature vectorization (alphabetical sorting), and enforces security.
     * **NiceGUI Layer:** Manteins the "Global State." When you change a model in the UI, it updates the shared memory that the API uses.
 
@@ -34,7 +34,7 @@ Ensure you have Python 3.9+ installed.
 
 ### 2. Install Dependencies
 ```bash
-pip install nicegui fastapi uvicorn numpy scikit-learn torch tensorflow joblib
+pip install nicegui fastapi numpy scikit-learn torch tensorflow joblib
 ```
 
 ### 3. Environment Configuration
@@ -53,7 +53,7 @@ $env:API_SECRET_TOKEN="your_super_secret_token"
 
 ### 4. Run the Application
 ```bash
-python app.py
+python main.py
 ```
 The server will start at `http://localhost:8000`.
 
@@ -100,11 +100,12 @@ curl -X POST "http://localhost:8000/predict_proba" \
 ---
 
 ## 📁 Project Structure
-* `app.py`: The entry point containing the FastAPI routes and NiceGUI dashboard logic.
+* `main.py`: The entry point containing the FastAPI routes and NiceGUI dashboard logic.
 * `core.py`: The core engine containing model wrappers, the loader factory, and global state management.
+* `/logs/`: Stores logs.
 * `/models/`: Permanent storage for saved models.
 * `/temp_models/`: Temporary staging area for uploaded files.
 
 ## ⚠️ Security & Production Notes
-* **Token Security:** In production, always use a long, complex string via environment variables. Never hardcode secrets in `app.py`.
+* **Token Security:** In production, always use a long, complex string via environment variables. Never hardcode secrets in `main.py`.
 * **Scaling:** This application is designed as a single-process "Control Center." For massive scale (thousands of requests per second), consider separating the NiceGUI management tool from a dedicated FastAPI cluster.
